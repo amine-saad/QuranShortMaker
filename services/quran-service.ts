@@ -143,15 +143,39 @@ export async function getSurahById(id: number): Promise<Surah | null> {
   return SURAHS.find(s => s.id === id) || null;
 }
 
-export async function getAyahs(surahId: number, start: number, end: number): Promise<Ayah[]> {
-  // Mock Ayah data
-  const ayahs: Ayah[] = [];
-  for (let i = start; i <= end; i++) {
-    ayahs.push({
-      number: i,
-      textArabic: `بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ (${i})`,
-      textEnglish: `In the name of Allah, the Entirely Merciful, the Especially Merciful. (${i})`,
-    });
+export async function getAyahs(surahId: number, startAyah: number, endAyah: number): Promise<Ayah[]> {
+  try {
+    // Fetch from Quran.com API v4
+    const response = await fetch(
+      `https://api.quran.com/api/v4/verses/by_chapter/${surahId}?verse_key_from=${surahId}:${startAyah}&verse_key_to=${surahId}:${endAyah}&translations=131&fields=text_uthmani`
+    );
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch Ayahs');
+    }
+    
+    const data = await response.json();
+    
+    return data.verses.map((verse: any) => ({
+      number: verse.verse_number,
+      textArabic: verse.text_uthmani || verse.text_imlaei,
+      textEnglish: verse.translations?.[0]?.text || '',
+    }));
+  } catch (error) {
+    console.error('Error fetching Ayahs:', error);
+    // Fallback to mock data
+    const ayahs: Ayah[] = [];
+    for (let i = startAyah; i <= endAyah; i++) {
+      ayahs.push({
+        number: i,
+        textArabic: `بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ (${i})`,
+        textEnglish: `In the name of Allah, the Entirely Merciful, the Especially Merciful. (${i})`,
+      });
+    }
+    return ayahs;
   }
-  return ayahs;
+}
+
+export function getReciterById(id: string): Reciter | undefined {
+  return RECITERS.find(r => r.id === id);
 }

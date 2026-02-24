@@ -5,7 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import Button from '@/components/ui/Button';
 import VideoUploadCard from '@/components/feature/VideoUploadCard';
-import { getSurahById, RECITERS, getAyahs } from '@/services/quran-service';
+import { getSurahById, RECITERS, getAyahs, getReciterById } from '@/services/quran-service';
 import { exportVideo, ExportProgress } from '@/services/video-service';
 import { useVideoUpload } from '@/hooks/useVideoUpload';
 import { useProjects } from '@/hooks/useProjects';
@@ -101,9 +101,14 @@ export default function ConfigureScreen() {
         // Continue with export even if save fails
       }
 
+      // Fetch Ayahs for the selected range
+      const ayahs = await getAyahs(surah.id, start, end);
+      
       const outputPath = await exportVideo(
         videoSource,
-        'mock://audio.mp3',
+        ayahs,
+        surah.id,
+        selectedReciter,
         subtitles,
         exportConfig,
         (prog) => setProgress(prog),
