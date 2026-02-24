@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable, TextInput } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Pressable, TextInput, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -45,6 +45,18 @@ export default function ConfigureScreen() {
 
   const handleExport = async () => {
     if (!surah) return;
+
+    // Check platform
+    if (Platform.OS === 'web') {
+      showAlert(
+        'Mobile Only Feature',
+        'Video export requires native mobile APIs. Please use the OnSpace mobile app or scan the QR code to preview on your device.',
+        [
+          { text: 'Got it', style: 'default' }
+        ]
+      );
+      return;
+    }
 
     if (!videoSource) {
       showAlert('No Video', 'Please upload a video first');

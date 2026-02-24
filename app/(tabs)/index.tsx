@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, StyleSheet } from 'react-native';
+import { View, Text, FlatList, StyleSheet, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { MaterialIcons } from '@expo/vector-icons';
 import SearchBar from '@/components/ui/SearchBar';
 import SurahCard from '@/components/feature/SurahCard';
 import { searchSurahs, SURAHS } from '@/services/quran-service';
@@ -37,6 +38,14 @@ export default function BrowseScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Quran Short Maker</Text>
         <Text style={styles.subtitle}>Create beautiful recitation videos</Text>
+        {Platform.OS === 'web' && (
+          <View style={styles.webNotice}>
+            <MaterialIcons name="info" size={16} color={Colors.warning} />
+            <Text style={styles.webNoticeText}>
+              📱 This app requires a mobile device. Scan the QR code above to preview on your phone.
+            </Text>
+          </View>
+        )}
         <View style={styles.privacyBadge}>
           <Text style={styles.privacyText}>🔒 All processing on-device</Text>
         </View>
@@ -84,6 +93,23 @@ const styles = StyleSheet.create({
     fontWeight: Typography.regular,
     color: Colors.textSecondary,
     marginBottom: Spacing.sm,
+  },
+  webNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+    padding: Spacing.md,
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.warning,
+  },
+  webNoticeText: {
+    flex: 1,
+    fontSize: Typography.sm,
+    fontWeight: Typography.medium,
+    color: Colors.warning,
   },
   privacyBadge: {
     alignSelf: 'flex-start',
