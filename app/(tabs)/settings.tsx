@@ -1,20 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TextInput, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAlert } from '@/template';
+import { savePexelsApiKey, getPexelsApiKey } from '@/services/pexels-service';
 import { Colors, Typography, Spacing, BorderRadius } from '@/constants/theme';
 
 export default function SettingsScreen() {
   const { showAlert } = useAlert();
   const [pexelsKey, setPexelsKey] = useState('');
+  const [loading, setLoading] = useState(true);
 
-  const handleSaveKey = () => {
+  useEffect(() => {
+    loadApiKey();
+  }, []);
+
+  const loadApiKey = async () => {
+    try {
+      const key = await getPexelsApiKey();
+      if (key) {
+        setPexelsKey(key);
+      }
+    } catch (error) {
+      console.error('Error loading API key:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveKey = async () => {
     if (pexelsKey.trim() === '') {
       showAlert('Error', 'Please enter a valid API key');
       return;
     }
-    showAlert('Success', 'Pexels API key saved securely');
+    try {
+      await savePexelsApiKey(pexelsKey.trim());
+      showAlert('Success', 'Pexels API key saved securely');
+    } catch (error) {
+      showAlert('Error', 'Failed to save API key');
+    }
   };
 
   const handleClearCache = () => {
@@ -44,10 +68,11 @@ export default function SettingsScreen() {
           <TextInput
             value={pexelsKey}
             onChangeText={setPexelsKey}
-            placeholder="Enter API Key"
+            placeholder={loading ? 'Loading...' : 'Enter API Key'}
             placeholderTextColor={Colors.textMuted}
             style={styles.input}
-            secureTextEntry
+            secureTextEntry={pexelsKey.length > 0}
+            editable={!loading}
           />
           
           <Pressable

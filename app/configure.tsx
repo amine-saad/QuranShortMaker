@@ -5,12 +5,14 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import Button from '@/components/ui/Button';
 import VideoUploadCard from '@/components/feature/VideoUploadCard';
+import { PexelsSearchModal } from '@/components';
 import { getSurahById, RECITERS, getAyahs, getReciterById } from '@/services/quran-service';
 import { exportVideo, ExportProgress } from '@/services/video-service';
+import { getPexelsApiKey } from '@/services/pexels-service';
 import { useVideoUpload } from '@/hooks/useVideoUpload';
 import { useProjects } from '@/hooks/useProjects';
 import { useAlert } from '@/template';
-import { Surah, Reciter, SubtitleConfig, ExportConfig } from '@/types';
+import { Surah, Reciter, SubtitleConfig, ExportConfig, VideoSource } from '@/types';
 import { Colors, Typography, Spacing, BorderRadius } from '@/constants/theme';
 
 export default function ConfigureScreen() {
@@ -27,8 +29,12 @@ export default function ConfigureScreen() {
   const [exporting, setExporting] = useState(false);
   const [progress, setProgress] = useState<ExportProgress | null>(null);
   const [cancelRequested, setCancelRequested] = useState(false);
+  const [videoTab, setVideoTab] = useState<'upload' | 'search'>('upload');
+  const [pexelsModalVisible, setPexelsModalVisible] = useState(false);
+  const [pexelsApiKey, setPexelsApiKey] = useState<string | null>(null);
+  const [videoSource, setVideoSource] = useState<VideoSource | null>(null);
   
-  const { videoSource, uploading, pickVideo, clearVideo } = useVideoUpload();
+  const { uploading, pickVideo } = useVideoUpload();
   const { saveProject } = useProjects();
 
   useEffect(() => {
@@ -42,6 +48,42 @@ export default function ConfigureScreen() {
     };
     loadSurah();
   }, [params.surahId]);
+
+  useEffect(() => {
+    const loadApiKey = async () => {
+      const key = await getPexelsApiKey();
+      setPexelsApiKey(key);
+    };
+    loadApiKey();
+  }, []);
+
+  const handleUploadVideo = async () => {
+    const result = await pickVideo();
+    if (result) {
+      setVideoSource(result);
+    }
+  };
+
+  const handleSearchPexels = () => {
+    if (!pexelsApiKey) {
+      showAlert('API Key Required', 'Please add your Pexels API key in Settings first');
+      return;
+    }
+    setPexelsModalVisible(true);
+  };
+
+  const handleSelectPexelsVideo = (uri: string, thumbnail: string, pexelsId: number) => {
+    setVideoSource({
+      type: 'pexels',
+      uri,
+      thumbnail,
+      pexelsId,
+    });
+  };
+
+  const clearVideo = () => {
+    setVideoSource(null);
+  };
 
   const handleExport = async () => {
     if (!surah) return;
@@ -197,12 +239,88 @@ export default function ConfigureScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Background Video</Text>
-          <VideoUploadCard
-            videoSource={videoSource}
-            onUpload={pickVideo}
-            onClear={clearVideo}
-            uploading={uploading}
-          />
+          
+          {/* Video Source Tabs */}
+          <View style={styles.tabRow}>
+            <Pressable
+              onPress={() => setVideoTab('upload')}
+              style={[
+                styles.tab,
+                videoTab === 'upload' && styles.tabActive,
+              ]}
+            >
+              <MaterialIcons
+                name="upload"
+                size={18}
+                color={videoTab === 'upload' ? Colors.primary : Colors.textMuted}
+              />
+              <Text
+                style={[
+                  styles.tabText,
+                  videoTab === 'upload' && styles.tabTextActive,
+                ]}
+              >
+                Upload
+              </Text>
+            </Pressable>
+            
+            <Pressable
+              onPress={() => setVideoTab('search')}
+              style={[
+                styles.tab,
+                videoTab === 'search' && styles.tabActive,
+              ]}
+            >
+              <MaterialIcons
+                name="search"
+                size={18}
+                color={videoTab === 'search' ? Colors.primary : Colors.textMuted}
+              />
+              <Text
+                style={[
+                  styles.tabText,
+                  videoTab === 'search' && styles.tabTextActive,
+                ]}
+              >
+                Pexels
+              </Text>
+            </Pressable>
+          </View>
+
+          {videoTab === 'upload' ? (
+            <VideoUploadCard
+              videoSource={videoSource}
+              onUpload={handleUploadVideo}
+              onClear={clearVideo}
+              uploading={uploading}
+            />
+          ) : (
+            <Pressable
+              onPress={handleSearchPexels}
+              style={({ pressed }) => [
+                styles.pexelsButton,
+                pressed && styles.pexelsButtonPressed,
+                !pexelsApiKey && styles.pexelsButtonDisabled,
+              ]}
+            >
+              <MaterialIcons name="video-library" size={48} color={Colors.primary} />
+              <Text style={styles.pexelsText}>
+                {pexelsApiKey ? 'Search Pexels Stock Videos' : 'Add API Key in Settings'}
+              </Text>
+              {pexelsApiKey && (
+                <Text style={styles.pexelsSubtext}>Free HD videos for your Quran shorts</Text>
+              )}
+            </Pressable>
+          )}
+
+          {videoSource && videoSource.type === 'pexels' && (
+            <View style={styles.attributionBox}>
+              <MaterialIcons name="info-outline" size={16} color={Colors.textMuted} />
+              <Text style={styles.attributionText}>
+                Video from Pexels - Attribution required when sharing
+              </Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.section}>
@@ -315,6 +433,13 @@ export default function ConfigureScreen() {
           </View>
         )}
       </ScrollView>
+
+      <PexelsSearchModal
+        visible={pexelsModalVisible}
+        apiKey={pexelsApiKey || ''}
+        onClose={() => setPexelsModalVisible(false)}
+        onSelectVideo={handleSelectPexelsVideo}
+      />
 
       <View style={styles.footer}>
         <Button
@@ -534,6 +659,78 @@ const styles = StyleSheet.create({
   progressText: {
     fontSize: Typography.sm,
     fontWeight: Typography.medium,
+    color: Colors.textMuted,
+  },
+  tabRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  tabActive: {
+    backgroundColor: Colors.surfaceElevated,
+    borderColor: Colors.primary,
+  },
+  tabText: {
+    fontSize: Typography.sm,
+    fontWeight: Typography.semibold,
+    color: Colors.textMuted,
+  },
+  tabTextActive: {
+    color: Colors.primary,
+  },
+  pexelsButton: {
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.md,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: Colors.border,
+    paddingVertical: Spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pexelsButtonPressed: {
+    opacity: 0.7,
+  },
+  pexelsButtonDisabled: {
+    opacity: 0.5,
+  },
+  pexelsText: {
+    fontSize: Typography.lg,
+    fontWeight: Typography.semibold,
+    color: Colors.text,
+    marginTop: Spacing.md,
+  },
+  pexelsSubtext: {
+    fontSize: Typography.sm,
+    fontWeight: Typography.regular,
+    color: Colors.textMuted,
+    marginTop: Spacing.xs,
+  },
+  attributionBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.sm,
+    padding: Spacing.sm,
+    marginTop: Spacing.md,
+  },
+  attributionText: {
+    flex: 1,
+    fontSize: Typography.xs,
+    fontWeight: Typography.regular,
     color: Colors.textMuted,
   },
   footer: {
