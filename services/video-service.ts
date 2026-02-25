@@ -172,14 +172,14 @@ export async function exportVideo(
     
     // Execute FFmpeg with progress tracking
     let lastProgress = 50;
-    await FFmpegKitConfig.enableStatisticsCallback((statistics: Statistics) => {
+    const estimatedDuration = durations.reduce((sum, d) => sum + d, 0) * 1000;
+    
+    FFmpegKitConfig.enableStatisticsCallback((statistics: Statistics) => {
       if (isCancelled) return;
       
       const time = statistics.getTime();
-      if (time > 0) {
-        // Estimate progress based on time (rough estimation)
-        // Assuming 60 seconds total for the video
-        const estimatedDuration = durations.reduce((sum, d) => sum + d, 0) * 1000;
+      if (time > 0 && estimatedDuration > 0) {
+        // Estimate progress based on time
         const progress = Math.min(95, 50 + (time / estimatedDuration) * 45);
         
         if (progress > lastProgress) {
@@ -201,7 +201,7 @@ export async function exportVideo(
     const returnCode = await session.getReturnCode();
     
     // Disable statistics callback
-    await FFmpegKitConfig.enableStatisticsCallback(null);
+    FFmpegKitConfig.enableStatisticsCallback(null);
     
     if (checkCancel()) {
       // Clean up output file if cancelled
@@ -247,7 +247,7 @@ export async function exportVideo(
     
   } catch (error: any) {
     // Clean up on error
-    await FFmpegKitConfig.enableStatisticsCallback(null);
+    FFmpegKitConfig.enableStatisticsCallback(null);
     throw error;
   }
 }
