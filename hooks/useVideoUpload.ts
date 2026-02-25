@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { VideoSource } from '@/types';
 
@@ -8,12 +7,6 @@ export function useVideoUpload() {
   const [uploading, setUploading] = useState(false);
 
   const pickVideo = async (): Promise<boolean> => {
-    // Web limitation notice
-    if (Platform.OS === 'web') {
-      alert('Video upload is only available on mobile devices. Please use the OnSpace mobile app.');
-      return false;
-    }
-    
     try {
       setUploading(true);
 
